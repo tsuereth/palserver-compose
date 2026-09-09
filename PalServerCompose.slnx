@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="PalServerConfigManager/PalServerConfigManager.csproj" />
+  <Project Path="PalServerConfigManager.Test/PalServerConfigManager.Test.csproj" />
+</Solution>
