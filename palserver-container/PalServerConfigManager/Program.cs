@@ -166,6 +166,10 @@ namespace PalServerConfigManager
                 logger.LogInformation($"Writing settings: {settingsPath}");
                 settings.WriteToFile(settingsPath);
             }
+            else
+            {
+                logger.LogInformation("No settings have changed, exiting");
+            }
 
             return 0;
         }
