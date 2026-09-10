@@ -86,9 +86,41 @@ if [ ! -z "${PUBLIC_LOBBY}" ]; then
 	PALSERVER_OPTIONS="${PALSERVER_OPTIONS} -publiclobby"
 fi
 
-# TODO: trap signals! after PalServer.sh is started, kill/stop/etc should halt it BUT still execute [also TODO] cleanup steps afterward
+# When the host system is canceling/stopping this container,
+# it'll issue SIGTERM (15); trap that to try a clean shutdown.
+PALSERVER_PID=
+STOP_SIGNAL=15
+palserver_shutdown()
+(
+	API_PASSWORD=${ADMIN_PASSWORD}
+	if [ ! -z "${ADMIN_PASSWORD_FILE}" ]; then
+		API_PASSWORD=$(cat ${ADMIN_PASSWORD_FILE} | tr -d "[:space:]")
+	fi
+	SHUTDOWN_RESULT=1
+	if [ ! -z "${API_PASSWORD}" ]; then
+		echo Sending shutdown request
+			curl --silent \
+			--max-time=1 \
+			--user admin:${API_PASSWORD} \
+			--data='{"waittime":1}' \
+			http://localhost:8212/v1/api/shutdown
+		SHUTDOWN_RESULT=$?
+	fi
+
+	if [ "${SHUTDOWN_RESULT}" != "0" ] && [ ! -z "${PALSERVER_PID}" ]; then
+		echo Stopping PalServer at PID ${PALSERVER_PID} with signal ${STOP_SIGNAL}
+		kill -${STOP_SIGNAL} ${PALSERVER_PID}
+	fi
+)
+trap "palserver_shutdown" ${STOP_SIGNAL}
 
 echo Starting game server: ${PALSERVER_DATA_PATH}/PalServer.sh ${PALSERVER_OPTIONS}
-exec ${PALSERVER_DATA_PATH}/PalServer.sh ${PALSERVER_OPTIONS}
+${PALSERVER_DATA_PATH}/PalServer.sh ${PALSERVER_OPTIONS} &
+PALSERVER_PID=$!
+echo PalServer is running as PID ${PALSERVER_PID}
+
+# Wait for the PalServer process to exit.
+wait ${PALSERVER_PID}
+echo PalServer at PID ${PALSERVER_PID} has completed
 
 # TODO?: sync local savedata to remote

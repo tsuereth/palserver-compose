@@ -57,6 +57,8 @@ services:
       timeout: 1s
       retries: 4
       start_period: 15s
+    stop_signal: SIGTERM
+    stop_grace_period: 10s
   metrics_exporter:
     image: ghcr.io/tsuereth/palserver-metrics-exporter:latest
     command: --palserver-host=game --palserver-admin-password-file=/run/secrets/admin_password
