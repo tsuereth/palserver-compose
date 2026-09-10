@@ -99,7 +99,7 @@ palserver_shutdown()
 	SHUTDOWN_RESULT=1
 	if [ ! -z "${API_PASSWORD}" ]; then
 		echo Sending shutdown request
-			curl --silent \
+		curl --fail --silent \
 			--max-time=1 \
 			--user admin:${API_PASSWORD} \
 			--data='{"waittime":1}' \
