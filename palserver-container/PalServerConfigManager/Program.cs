@@ -164,6 +164,13 @@ namespace PalServerConfigManager
             if (settingsHaveChanged)
             {
                 logger.LogInformation($"Writing settings: {settingsPath}");
+
+                var settingsDir = Path.GetDirectoryName(settingsPath);
+                if (!Directory.Exists(settingsDir))
+                {
+                    Directory.CreateDirectory(settingsDir);
+                }
+
                 settings.WriteToFile(settingsPath);
             }
             else
