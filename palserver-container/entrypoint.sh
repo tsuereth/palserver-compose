@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 RUNAS_UID=${RUNAS_UID:-1000}
 RUNAS_GID=${RUNAS_GID:-1000}
@@ -42,48 +42,49 @@ fi
 # TODO?: sync remote savedata to local
 
 # Build options for the config manager based on what was provided in ENV.
-CONFIG_MANAGER_OPTIONS=
+CONFIG_MANAGER_OPTIONS=()
 if [ ! -z "${SERVER_NAME}" ]; then
-	CONFIG_MANAGER_OPTIONS="${CONFIG_MANAGER_OPTIONS} \
-		--set-server-name=${SERVER_NAME}"
+	CONFIG_MANAGER_OPTIONS+=("--set-server-name")
+	CONFIG_MANAGER_OPTIONS+=("${SERVER_NAME}")
 fi
 if [ ! -z "${SERVER_DESCRIPTION}" ]; then
-	CONFIG_MANAGER_OPTIONS="${CONFIG_MANAGER_OPTIONS} \
-		--set-server-description=${SERVER_DESCRIPTION}"
+	CONFIG_MANAGER_OPTIONS+=("--set-server-description")
+	CONFIG_MANAGER_OPTIONS+=("${SERVER_DESCRIPTION}")
 fi
 if [ ! -z "${ADMIN_PASSWORD}" ]; then
-	CONFIG_MANAGER_OPTIONS="${CONFIG_MANAGER_OPTIONS} \
-		--set-admin-password=${ADMIN_PASSWORD}"
+	CONFIG_MANAGER_OPTIONS+=("--set-admin-password")
+	CONFIG_MANAGER_OPTIONS+=("${ADMIN_PASSWORD}")
 fi
 if [ ! -z "${ADMIN_PASSWORD_FILE}" ]; then
-	CONFIG_MANAGER_OPTIONS="${CONFIG_MANAGER_OPTIONS} \
-		--set-admin-password-file=${ADMIN_PASSWORD_FILE}"
+	CONFIG_MANAGER_OPTIONS+=("--set-admin-password-file")
+	CONFIG_MANAGER_OPTIONS+=("${ADMIN_PASSWORD_FILE}")
 fi
 if [ ! -z "${SERVER_PASSWORD}" ]; then
-	CONFIG_MANAGER_OPTIONS="${CONFIG_MANAGER_OPTIONS} \
-		--set-server-password=${SERVER_PASSWORD}"
+	CONFIG_MANAGER_OPTIONS+=("--set-server-password")
+	CONFIG_MANAGER_OPTIONS+=("${SERVER_PASSWORD}")
 fi
 if [ ! -z "${SERVER_PASSWORD_FILE}" ]; then
-	CONFIG_MANAGER_OPTIONS="${CONFIG_MANAGER_OPTIONS} \
-		--set-server-password-file=${SERVER_PASSWORD_FILE}"
+	CONFIG_MANAGER_OPTIONS+=("--set-server-password-file")
+	CONFIG_MANAGER_OPTIONS+=("${SERVER_PASSWORD_FILE}")
 fi
 if [ ! -z "${REST_API_ENABLED}" ]; then
-	CONFIG_MANAGER_OPTIONS="${CONFIG_MANAGER_OPTIONS} \
-		--set-rest-api-enabled=${REST_API_ENABLED}"
+	CONFIG_MANAGER_OPTIONS+=("--set-rest-api-enabled")
+	CONFIG_MANAGER_OPTIONS+=("${REST_API_ENABLED}")
 fi
 
 # Set up the server configuration, including any ENV overrides.
 ${CONFIG_MANAGER_DIR}/PalServerConfigManager \
-	--palserver-install-dir=${PALSERVER_DATA_PATH} ${CONFIG_MANAGER_OPTIONS}
+	--palserver-install-dir=${PALSERVER_DATA_PATH} \
+	"${CONFIG_MANAGER_OPTIONS[@]}"
 CONFIG_MANAGER_RESULT=$?
 if [ "${CONFIG_MANAGER_RESULT}" != "0" ]; then
 	echo Error result ${CONFIG_MANAGER_RESULT} from PalServerConfigManager
 	exit ${CONFIG_MANAGER_RESULT}
 fi
 
-PALSERVER_OPTIONS=
+PALSERVER_OPTIONS=()
 if [ ! -z "${PUBLIC_LOBBY}" ]; then
-	PALSERVER_OPTIONS="${PALSERVER_OPTIONS} -publiclobby"
+	PALSERVER_OPTIONS+=("-publiclobby")
 fi
 
 # When the host system is canceling/stopping this container,
@@ -114,8 +115,9 @@ palserver_shutdown()
 )
 trap "palserver_shutdown" ${STOP_SIGNAL}
 
-echo Starting game server: ${PALSERVER_DATA_PATH}/PalServer.sh ${PALSERVER_OPTIONS}
-${PALSERVER_DATA_PATH}/PalServer.sh ${PALSERVER_OPTIONS} &
+echo Starting game server: ${PALSERVER_DATA_PATH}/PalServer.sh \
+	"${PALSERVER_OPTIONS[@]}"
+${PALSERVER_DATA_PATH}/PalServer.sh ${PALSERVER_OPTIONS[@]} &
 PALSERVER_PID=$!
 echo PalServer is running as PID ${PALSERVER_PID}
 

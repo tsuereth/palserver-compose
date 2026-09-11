@@ -32,8 +32,8 @@ services:
       - RUNAS_UID=1000
       - RUNAS_GID=1000
       - PALSERVER_DATA_PATH=/palserver
-      - SERVER_NAME="My Palworld Server"
-      - SERVER_DESCRIPTION="There are many like it, but this one is mine"
+      - SERVER_NAME=${SERVER_NAME}
+      - SERVER_DESCRIPTION=${SERVER_DESCRIPTION}
       - ADMIN_PASSWORD_FILE=/run/secrets/admin_password
       - SERVER_PASSWORD_FILE=/run/secrets/server_password
       - PUBLIC_LOBBY=True

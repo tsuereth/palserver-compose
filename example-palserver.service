@@ -1,0 +1,17 @@
+[Unit]
+Description=PalServer
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+Restart=no
+WorkingDirectory=/var/palserver
+ExecStart=/usr/bin/docker compose up \
+	--no-color --yes \
+	--build --pull=always --force-recreate
+ExecStop=/usr/bin/docker compose down
+SyslogIdentifier=palserver
+
+[Install]
+WantedBy=multi-user.target
