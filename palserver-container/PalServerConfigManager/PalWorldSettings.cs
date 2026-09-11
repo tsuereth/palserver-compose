@@ -195,7 +195,8 @@ namespace PalServerConfigManager
                 return stringValue;
             }
 
-            return $"\"{stringValue}\"";
+            var quoteEscapedStringValue = stringValue.Replace("\"", "\\\"");
+            return $"\"{quoteEscapedStringValue}\"";
         }
     }
 }
