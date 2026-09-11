@@ -22,3 +22,6 @@ jobs:
 
       - name: Test PalServerConfigManager
         run: dotnet test palserver-container/PalServerConfigManager.Test/PalServerConfigManager.Test.csproj
+
+      - name: Test docker-compose
+        run: docker compose --env-file=example-dotenv.env build
