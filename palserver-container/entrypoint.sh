@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 
-RUNAS_UID=${RUNAS_UID:-1000}
-RUNAS_GID=${RUNAS_GID:-1000}
-
 if [ -z "${PALSERVER_DATA_PATH}" ]; then
 	echo Missing required variable PALSERVER_DATA_PATH
 	exit -1
@@ -10,33 +7,6 @@ fi
 if [ ! -x "${PALSERVER_DATA_PATH}/PalServer.sh" ]; then
 	echo Cannot find expected server script at ${PALSERVER_DATA_PATH}/PalServer.sh
 	exit -1
-fi
-
-# If this script is run by root, create (or reuse) the requested user.
-if [ $(id -u) -eq 0 ]; then
-	USERNAME=steam
-	UID_CHECK=$(getent passwd ${RUNAS_UID})
-	UID_CHECK_STATUS=$?
-	if [ $UID_CHECK_STATUS -eq 0 ]; then
-		USERNAME=$(echo ${UID_CHECK} | cut -d':' -f1)
-		echo Found existing user \'${USERNAME}\' with UID ${RUNAS_UID}
-	else
-		echo Creating user \'${USERNAME}\' with UID:GID ${RUNAS_UID}:${RUNAS_GID}
-		useradd --uid ${RUNAS_UID} --gid ${RUNAS_GID} ${USERNAME}
-	fi
-
-	echo Switching to user \'${USERNAME}\'
-	exec su ${USERNAME} $0 -- $@
-fi
-
-# Confirm the script is now running as the requested user.
-if [ $(id -u) -ne ${RUNAS_UID} ]; then
-	echo Requested UID ${RUNAS_UID}, but running as $(whoami) with UID $(id -u)
-	exit 1
-fi
-if [ $(id -g) -ne ${RUNAS_GID} ]; then
-	echo Requested GID ${RUNAS_GID}, but running as $(whoami) with GID $(id -g)
-	exit 2
 fi
 
 # TODO?: sync remote savedata to local
@@ -91,38 +61,53 @@ fi
 # it'll issue SIGTERM (15); trap that to try a clean shutdown.
 PALSERVER_PID=
 STOP_SIGNAL=15
+SHUTDOWN_RESULT=
 palserver_shutdown()
-(
+{
+	if [ -z "${PALSERVER_PID}" ]; then
+		echo Shutdown handler triggered without a PALSERVER_PID, exiting
+		exit 0
+	fi
+
 	API_PASSWORD=${ADMIN_PASSWORD}
 	if [ ! -z "${ADMIN_PASSWORD_FILE}" ]; then
 		API_PASSWORD=$(cat ${ADMIN_PASSWORD_FILE} | tr -d "[:space:]")
 	fi
-	SHUTDOWN_RESULT=1
+	API_RESULT=
 	if [ ! -z "${API_PASSWORD}" ]; then
-		echo Sending shutdown request
+		echo Sending shutdown API request
 		curl --fail --silent \
 			--max-time=1 \
 			--user admin:${API_PASSWORD} \
 			--data='{"waittime":1}' \
 			http://localhost:8212/v1/api/shutdown
-		SHUTDOWN_RESULT=$?
+		API_RESULT=$?
+		echo Shutdown API result: ${API_RESULT}
 	fi
 
-	if [ "${SHUTDOWN_RESULT}" != "0" ] && [ ! -z "${PALSERVER_PID}" ]; then
+	if [ "${API_RESULT}" != "0" ]; then
 		echo Stopping PalServer at PID ${PALSERVER_PID} with signal ${STOP_SIGNAL}
 		kill -${STOP_SIGNAL} ${PALSERVER_PID}
 	fi
-)
+
+	echo Shutting down, waiting for PalServer at PID ${PALSERVER_PID}
+	wait ${PALSERVER_PID}
+	SHUTDOWN_RESULT=$?
+	echo Shutdown wait result for PalServer at PID ${PALSERVER_PID} was ${SHUTDOWN_RESULT}
+}
 trap "palserver_shutdown" ${STOP_SIGNAL}
 
-echo Starting game server: ${PALSERVER_DATA_PATH}/PalServer.sh \
-	"${PALSERVER_OPTIONS[@]}"
-${PALSERVER_DATA_PATH}/PalServer.sh ${PALSERVER_OPTIONS[@]} &
+echo Starting game server: ${PALSERVER_DATA_PATH}/PalServer.sh "${PALSERVER_OPTIONS[@]}"
+${PALSERVER_DATA_PATH}/PalServer.sh "${PALSERVER_OPTIONS[@]}" &
 PALSERVER_PID=$!
 echo PalServer is running as PID ${PALSERVER_PID}
 
 # Wait for the PalServer process to exit.
 wait ${PALSERVER_PID}
-echo PalServer at PID ${PALSERVER_PID} has completed
+PALSERVER_RESULT=$?
+# (Skip this wait-result message if the shutdown handler already got one.)
+if [ -z "${SHUTDOWN_RESULT}" ]; then
+	echo PalServer at PID ${PALSERVER_PID} has completed with result ${PALSERVER_RESULT}
+fi
 
 # TODO?: sync local savedata to remote

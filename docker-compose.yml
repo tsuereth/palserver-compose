@@ -29,8 +29,6 @@ services:
       - admin_password
       - server_password
     environment:
-      - RUNAS_UID=1000
-      - RUNAS_GID=1000
       - PALSERVER_DATA_PATH=/palserver
       - SERVER_NAME=${SERVER_NAME}
       - SERVER_DESCRIPTION=${SERVER_DESCRIPTION}
