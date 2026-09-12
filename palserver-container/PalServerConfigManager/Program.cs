@@ -72,7 +72,12 @@ namespace PalServerConfigManager
 
                 { "set-rest-api-enabled=", $"Set {SettingLabel_RestApiEnabled}, default: {setRestApiEnabledString}", o => setRestApiEnabledString = o },
             };
-            options.Parse(args);
+            var unexpectedArgs = options.Parse(args);
+            if (unexpectedArgs.Count > 0)
+            {
+                var unexpectedArgsString = string.Join(' ', unexpectedArgs);
+                throw new ArgumentException($"Unexpected arguments: {unexpectedArgsString}");
+            }
 
             if (printHelp)
             {
