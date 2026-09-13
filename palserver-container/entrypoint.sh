@@ -52,7 +52,7 @@ if [ "${CONFIG_MANAGER_RESULT}" != "0" ]; then
 	exit ${CONFIG_MANAGER_RESULT}
 fi
 
-PALSERVER_OPTIONS=()
+PALSERVER_OPTIONS=("-enable-gamedata-api")
 if [ ! -z "${PUBLIC_LOBBY}" ]; then
 	PALSERVER_OPTIONS+=("-publiclobby")
 fi
