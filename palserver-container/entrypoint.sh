@@ -52,7 +52,16 @@ if [ "${CONFIG_MANAGER_RESULT}" != "0" ]; then
 	exit ${CONFIG_MANAGER_RESULT}
 fi
 
-PALSERVER_OPTIONS=("-enable-gamedata-api")
+PALSERVER_OPTIONS=()
+
+# Use JSON log formatting, instead of the default text format.
+# The PalServer JSON schema isn't ... great, but,
+# text logging includes way too many empty lines!
+PALSERVER_OPTIONS+=("-logformat=json")
+
+# Always enable the gamedata API, for the metrics exporter.
+PALSERVER_OPTIONS+=("-enable-gamedata-api")
+
 if [ ! -z "${PUBLIC_LOBBY}" ]; then
 	PALSERVER_OPTIONS+=("-publiclobby")
 fi
