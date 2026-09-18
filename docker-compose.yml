@@ -18,6 +18,11 @@ services:
       - CHOWN_UID_GID=1000:1000
     volumes:
       - palserver-installdir:/install-dir-volume
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
     restart: "no"
   game:
     build:
@@ -67,3 +72,8 @@ services:
       - admin_password
     ports:
       - "0.0.0.0:8213:8213"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
