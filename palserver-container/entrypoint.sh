@@ -2,121 +2,133 @@
 
 if [ -z "${PALSERVER_DATA_PATH}" ]; then
 	echo Missing required variable PALSERVER_DATA_PATH
-	exit -1
+	exit 1
 fi
 if [ ! -x "${PALSERVER_DATA_PATH}/PalServer.sh" ]; then
 	echo Cannot find expected server script at ${PALSERVER_DATA_PATH}/PalServer.sh
-	exit -1
+	exit 1
 fi
 
-# TODO?: sync remote savedata to local
+RUNAS_UID=$(id -u)
+RUNAS_GID=$(id -g)
+if [ ! -z "${RUNAS_UID_GID}" ]; then
+	RUNAS_UID="${RUNAS_UID_GID%:*}" # substring without ":..."
+	if [ ! -z "${RUNAS_UID}" ] && [ -z "${RUNAS_UID##*[!0-9]*}" ]; then
+		echo Usage error: a non-numeric UID was provided in RUNAS_UID_GID
+		exit 1
+	fi
 
-# Build options for the config manager based on what was provided in ENV.
-CONFIG_MANAGER_OPTIONS=()
-if [ ! -z "${SERVER_NAME}" ]; then
-	CONFIG_MANAGER_OPTIONS+=("--set-server-name")
-	CONFIG_MANAGER_OPTIONS+=("${SERVER_NAME}")
-fi
-if [ ! -z "${SERVER_DESCRIPTION}" ]; then
-	CONFIG_MANAGER_OPTIONS+=("--set-server-description")
-	CONFIG_MANAGER_OPTIONS+=("${SERVER_DESCRIPTION}")
-fi
-if [ ! -z "${ADMIN_PASSWORD}" ]; then
-	CONFIG_MANAGER_OPTIONS+=("--set-admin-password")
-	CONFIG_MANAGER_OPTIONS+=("${ADMIN_PASSWORD}")
-fi
-if [ ! -z "${ADMIN_PASSWORD_FILE}" ]; then
-	CONFIG_MANAGER_OPTIONS+=("--set-admin-password-file")
-	CONFIG_MANAGER_OPTIONS+=("${ADMIN_PASSWORD_FILE}")
-fi
-if [ ! -z "${SERVER_PASSWORD}" ]; then
-	CONFIG_MANAGER_OPTIONS+=("--set-server-password")
-	CONFIG_MANAGER_OPTIONS+=("${SERVER_PASSWORD}")
-fi
-if [ ! -z "${SERVER_PASSWORD_FILE}" ]; then
-	CONFIG_MANAGER_OPTIONS+=("--set-server-password-file")
-	CONFIG_MANAGER_OPTIONS+=("${SERVER_PASSWORD_FILE}")
-fi
-if [ ! -z "${REST_API_ENABLED}" ]; then
-	CONFIG_MANAGER_OPTIONS+=("--set-rest-api-enabled")
-	CONFIG_MANAGER_OPTIONS+=("${REST_API_ENABLED}")
+	if [ "${RUNAS_UID}" != $"{RUNAS_UID_GID}" ]; then
+		RUNAS_GID="${RUNAS_UID_GID#*:}" # substring without "...:"
+		if [ ! -z "${RUNAS_GID}" ] && [ -z "${RUNAS_GID##*[!0-9]*}" ]; then
+			echo Usage error: a non-numeric GID was provided in RUNAS_UID_GID
+			exit 1
+		fi
+	fi
 fi
 
-# Set up the server configuration, including any ENV overrides.
-${CONFIG_MANAGER_DIR}/PalServerConfigManager \
-	--palserver-install-dir=${PALSERVER_DATA_PATH} \
-	"${CONFIG_MANAGER_OPTIONS[@]}"
-CONFIG_MANAGER_RESULT=$?
-if [ "${CONFIG_MANAGER_RESULT}" != "0" ]; then
-	echo Error result ${CONFIG_MANAGER_RESULT} from PalServerConfigManager
-	exit ${CONFIG_MANAGER_RESULT}
+# PalServer cannot run as root!
+if [ ${RUNAS_UID} -eq 0 ]; then
+	echo Usage error: must provide a non-root UID in RUNAS_UID_GID
+	exit 1
 fi
 
-PALSERVER_OPTIONS=()
-
-# Use JSON log formatting, instead of the default text format.
-# The PalServer JSON schema isn't ... great, but,
-# text logging includes way too many empty lines!
-PALSERVER_OPTIONS+=("-logformat=json")
-
-# Always enable the gamedata API, for the metrics exporter.
-PALSERVER_OPTIONS+=("-enable-gamedata-api")
-
-if [ ! -z "${PUBLIC_LOBBY}" ]; then
-	PALSERVER_OPTIONS+=("-publiclobby")
+# If the requested UID doesn't exist, create it.
+USERNAME=palserver
+UID_CHECK=$(getent passwd ${RUNAS_UID})
+UID_CHECK_STATUS=$?
+if [ "${UID_CHECK_STATUS}" = "0" ]; then
+	USERNAME=$(echo ${UID_CHECK} | cut -d':' -f1)
+	echo Found existing user \'${USERNAME}\' with UID ${RUNAS_UID}
+else
+	echo Creating user \'${USERNAME}\' with UID:GID ${RUNAS_UID}:${RUNAS_GID}
+	useradd --uid ${RUNAS_UID} --gid ${RUNAS_GID} ${USERNAME}
+	USERADD_RESULT=$?
+	if [ "${USERADD_RESULT}" != "0" ]; then
+		echo useradd failed with exit status ${USERADD_RESULT}
+		exit 2
+	fi
 fi
 
 # When the host system is canceling/stopping this container,
 # it'll issue SIGTERM (15); trap that to try a clean shutdown.
-PALSERVER_PID=
+PALSERVER_PID_FILE=
+RUNSCRIPT_PID=
 STOP_SIGNAL=15
 SHUTDOWN_RESULT=
 palserver_shutdown()
 {
-	if [ -z "${PALSERVER_PID}" ]; then
-		echo Shutdown handler triggered without a PALSERVER_PID, exiting
-		exit 0
+	PALSERVER_PID=
+	if [ -z "${PALSERVER_PID_FILE}" ]; then
+		echo Shutdown handler triggered without a PALSERVER_PID_FILE
+	else
+		PALSERVER_PID=$(cat ${PALSERVER_PID_FILE} | tr -d "[:space:]")
+		if [ -z "${PALSERVER_PID}" ]; then
+			echo Shutdown handler triggered but PALSERVER_PID_FILE ${PALSERVER_PID_FILE} is empty
+		fi
 	fi
 
-	API_PASSWORD=${ADMIN_PASSWORD}
-	if [ ! -z "${ADMIN_PASSWORD_FILE}" ]; then
-		API_PASSWORD=$(cat ${ADMIN_PASSWORD_FILE} | tr -d "[:space:]")
-	fi
-	API_RESULT=
-	if [ ! -z "${API_PASSWORD}" ]; then
-		echo Sending shutdown API request
-		curl --fail --silent \
-			--max-time=1 \
-			--user admin:${API_PASSWORD} \
-			--data='{"waittime":1}' \
-			http://localhost:8212/v1/api/shutdown
-		API_RESULT=$?
-		echo Shutdown API result: ${API_RESULT}
+	if [ ! -z "${PALSERVER_PID}" ]; then
+		# Try to shut down the server with an API request first,
+		# before falling back to a harder `kill` attempt.
+		API_PASSWORD=${ADMIN_PASSWORD}
+		if [ ! -z "${ADMIN_PASSWORD_FILE}" ]; then
+			API_PASSWORD=$(cat ${ADMIN_PASSWORD_FILE} | tr -d "[:space:]")
+		fi
+		API_RESULT=
+		if [ ! -z "${API_PASSWORD}" ]; then
+			echo Sending shutdown API request
+			curl --fail --silent \
+				--max-time=1 \
+				--user admin:${API_PASSWORD} \
+				--data='{"waittime":1}' \
+				http://localhost:8212/v1/api/shutdown
+			API_RESULT=$?
+			echo Shutdown API result: ${API_RESULT}
+		fi
+
+		if [ "${API_RESULT}" != "0" ]; then
+			echo Stopping PalServer at PID ${PALSERVER_PID} with signal ${STOP_SIGNAL}
+			kill -${STOP_SIGNAL} ${PALSERVER_PID}
+		fi
 	fi
 
-	if [ "${API_RESULT}" != "0" ]; then
-		echo Stopping PalServer at PID ${PALSERVER_PID} with signal ${STOP_SIGNAL}
-		kill -${STOP_SIGNAL} ${PALSERVER_PID}
+	if [ -z "${RUNSCRIPT_PID}" ]; then
+		echo Shutdown handler triggered without a RUNSCRIPT_PID
+	else
+		echo Shutting down, waiting for run-script at PID ${RUNSCRIPT_PID}
+		wait ${RUNSCRIPT_PID}
+		RUNSCRIPT_WAIT_RESULT=$?
+		echo Wait result for run-script at PID ${RUNSCRIPT_PID} was ${RUNSCRIPT_WAIT_RESULT}
+		SHUTDOWN_RESULT=1
 	fi
-
-	echo Shutting down, waiting for PalServer at PID ${PALSERVER_PID}
-	wait ${PALSERVER_PID}
-	SHUTDOWN_RESULT=$?
-	echo Shutdown wait result for PalServer at PID ${PALSERVER_PID} was ${SHUTDOWN_RESULT}
 }
 trap "palserver_shutdown" ${STOP_SIGNAL}
 
-echo Starting game server: ${PALSERVER_DATA_PATH}/PalServer.sh "${PALSERVER_OPTIONS[@]}"
-${PALSERVER_DATA_PATH}/PalServer.sh "${PALSERVER_OPTIONS[@]}" &
-PALSERVER_PID=$!
-echo PalServer is running as PID ${PALSERVER_PID}
+PALSERVER_PID_FILE=$(mktemp -q)
+export PALSERVER_PID_FILE
+if [ $(id -u) -eq ${RUNAS_UID} ]; then
+	USERNAME=$(whoami)
+        echo User \'${USERNAME}\' with UID ${RUNAS_UID} starting run-script
+        /run.sh &
+        RUNSCRIPT_PID=$!
+else
+	# Make sure the PID file is writable by other users.
+	chmod 0777 ${PALSERVER_PID_FILE}
+	CHMOD_RESULT=$?
+	if [ "${CHMOD_RESULT}" != "0" ]; then
+		echo chmod failed with exit status ${CHMOD_RESULT}
+		exit 2
+	fi
 
-# Wait for the PalServer process to exit.
-wait ${PALSERVER_PID}
-PALSERVER_RESULT=$?
+	echo Switching to user \'${USERNAME}\' with UID ${RUNAS_UID} to start run-script
+	su -c /run.sh ${USERNAME} &
+	RUNSCRIPT_PID=$!
+fi
+echo run-script is running as PID ${RUNSCRIPT_PID}
+wait ${RUNSCRIPT_PID}
+RUNSCRIPT_RESULT=$?
 # (Skip this wait-result message if the shutdown handler already got one.)
 if [ -z "${SHUTDOWN_RESULT}" ]; then
-	echo PalServer at PID ${PALSERVER_PID} has completed with result ${PALSERVER_RESULT}
+	echo run-script at PID ${RUNSCRIPT_PID} has completed with result ${RUNSCRIPT_RESULT}
 fi
-
-# TODO?: sync local savedata to remote

@@ -27,8 +27,5 @@ ENV SERVER_PASSWORD_FILE=
 ENV REST_API_ENABLED=True
 
 COPY entrypoint.sh /
-# PalServer insists (reasonably) on running as a non-root user.
-# PalServerConfigManager and other tools should also run as this user,
-# to maintain consistent permissions across server and save data.
-USER ubuntu
+COPY run.sh /
 ENTRYPOINT ["/entrypoint.sh"]
