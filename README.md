@@ -151,7 +151,17 @@ One exception is the `-publiclobby` argument: when applied, a Palworld server wi
 
 ## Performance tuning
 
-**WORK IN PROGRESS**
+The Palworld server process is expected to consume CPU and memory in proportion to the number of simulating [in-game actors](https://dev.epicgames.com/documentation/unreal-engine/actors-in-unreal-engine), which in turn scales with:
+
+- The number of players connected at any time; pals and NPCs near a player's current location will be simulated in real-time.
+
+- The number of established base camps; worker pals assigned to a base will always be simulating.
+
+A server's maximum number of simultaneous players is the most important scaling factor to consider. While the number of base camps (gradually unlocked through "base level" missions) is also significant, default game settings result in a relatively low amount of bases.
+
+Consult [Pocketpair's documentation regarding performance-related configuration](https://docs.palworldgame.com/settings-and-operation/configuration#performances) for more information on how you can constrain (or grow) the resource needs of your game server.
+
+Older versions of Palworld, when the game was in Early Access, suggested particular [command-line options](https://docs.palworldgame.com/settings-and-operation/arguments) for tuning multi-threaded performance on a dedicated server. Per the Pocketpair documentation, these options are now deprecated; in version 1.0 and later, **the Palworld server process manages multiple worker threads automatically** without these options.
 
 ## Gameplay settings
 
