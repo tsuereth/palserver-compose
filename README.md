@@ -47,8 +47,6 @@ Goals of this project:
 
 - Support high-level performance profiling, by monitoring game server operations alongside key usage metrics.
 
-- **NOT YET IMPLEMENTED** ~~Allow multiple users to access the game server's configuration and save data by synchronizing with external storage (such as Dropbox or Google Drive).~~
-
 # Quick start
 
 *QUICK requirements*: the server host must have `docker` and `docker compose`; and must be able to receive data from players on **UDP port 8211**. If for example, your host is on a home network behind a typical router, the router's firewall should forward 8211/UDP from the internet to that host.
@@ -186,6 +184,14 @@ Refer to [the exporter project](https://github.com/tsuereth/palserver-metrics-ex
 A sysadmin should also collect host resource metrics - including CPU, memory, network, and disk usage - to monitor and analyze host resources alongside game server activity. Many instrumentation tools like [cAdvisor](https://github.com/google/cadvisor) and [Node Exporter](https://github.com/prometheus/node_exporter) can help with this.
 
 Finally, although typical monitoring discipline will also include service logs, the Palworld game server's log events are not particularly insightful. (In fact, game server log messages acknowledging `metrics_exporter`'s API requests are likely to constitute the bulk of its log volume.) This project makes no particular recommendation regarding log collection.
+
+# Save data management
+
+The Palworld server writes save data - including configuration settings, the state of the game world, and progress of players in it - to files within the game installation directory: `<install-dir>/Pal/Saved/...`
+
+When this project updates a Palworld server installation, the update is not expected to tamper with any existing save data. Nevertheless, sysadmins are encouraged to perform some kind of regular backup procedure *just in case*. (This project does not have any built-in mechanism for externally backing up save data.)
+
+Palworld's default settings include `bIsUseBackupSaveData=True` which causes the game server to regularly create backup snapshots, still inside the installation directory, of world and player save data. Pocketpair's [documentation describes the schedule of these snapshots](https://docs.palworldgame.com/settings-and-operation/configuration#about-bisusebackupsavedata). These backups can be a helpful safeguard in case of an unwanted change (like deleting a base by accident) or unexpected data corruption; they may also make host-side backups more onerous due to the number of files they create.
 
 # Component detail
 

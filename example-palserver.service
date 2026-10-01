@@ -1,6 +1,6 @@
 [Unit]
 Description=PalServer
-After=docker.service
+After=docker.service network.target
 Requires=docker.service
 
 [Service]

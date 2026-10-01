@@ -109,9 +109,9 @@ PALSERVER_PID_FILE=$(mktemp -q)
 export PALSERVER_PID_FILE
 if [ $(id -u) -eq ${RUNAS_UID} ]; then
 	USERNAME=$(whoami)
-        echo User \'${USERNAME}\' with UID ${RUNAS_UID} starting run-script
-        /run.sh &
-        RUNSCRIPT_PID=$!
+	echo User \'${USERNAME}\' with UID ${RUNAS_UID} starting run-script
+	/run.sh &
+	RUNSCRIPT_PID=$!
 else
 	# Make sure the PID file is writable by other users.
 	chmod 0777 ${PALSERVER_PID_FILE}

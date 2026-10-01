@@ -9,8 +9,6 @@ if [ ! -w "${PALSERVER_PID_FILE}" ]; then
 	exit 2
 fi
 
-# TODO?: sync remote savedata to local
-
 # Build options for the config manager based on what was provided in ENV.
 CONFIG_MANAGER_OPTIONS=()
 if [ ! -z "${SERVER_NAME}" ]; then
@@ -76,5 +74,3 @@ echo $PALSERVER_PID > ${PALSERVER_PID_FILE}
 wait ${PALSERVER_PID}
 PALSERVER_RESULT=$?
 echo PalServer at PID ${PALSERVER_PID} has completed with result ${PALSERVER_RESULT}
-
-# TODO?: sync local savedata to remote
