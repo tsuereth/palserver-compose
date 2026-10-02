@@ -187,7 +187,7 @@ The project's `docker-compose.yml` exposes metrics on `8213/tcp` to all host int
 
 By collecting those metrics with Prometheus, a sysadmin can use tools such as [Grafana](https://grafana.com) to monitor game server performance and player usage in real-time, and analyze those metrics' history.
 
-**SCREENSHOT TO-DO**
+![Grafana dashboard example](README-images/palserver-grafana.png)
 
 Refer to [the exporter project](https://github.com/tsuereth/palserver-metrics-exporter) for more details and usage examples.
 
