@@ -6,6 +6,7 @@
 publish_output
 
 palserver-data
+worldmap/*.png
 admin_password
 server_password
 

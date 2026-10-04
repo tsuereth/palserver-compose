@@ -195,6 +195,14 @@ A sysadmin should also collect host resource metrics - including CPU, memory, ne
 
 Finally, although typical monitoring discipline will also include service logs, the Palworld game server's log events are not particularly insightful. (In fact, game server log messages acknowledging `metrics_exporter`'s API requests are likely to constitute the bulk of its log volume.) This project makes no particular recommendation regarding log collection.
 
+## Optional map file for in-game locations
+
+The `metrics_exporter` service's metrics output includes map locations for players and in-game entities. Monitoring tools can, if desired, show those entities' locations on Palworld's map by providing that map as an image file.
+
+By saving an image file in the `worldmap/` folder, and modifying the `.env` setting for `METRICS_EXPORTER_MAP_FILE` to reference that file *e.g.* `METRICS_EXPORTER_MAP_FILE=/worldmap/T_WorldMap.png`, that image will be served by a special HTTP endpoint - and can be used in a metrics visualization - as described in [PalServerMetricsExporter's README](https://github.com/tsuereth/palserver-metrics-exporter/blob/main/README.md#map-image-and-location-coordinates).
+
+**SCREENSHOT TODO**
+
 # Save data management
 
 The Palworld server writes save data - including configuration settings, the state of the game world, and progress of players in it - to files within the game installation directory: `<install-dir>/Pal/Saved/...`
