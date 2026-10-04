@@ -65,7 +65,7 @@ services:
     stop_grace_period: 10s
   metrics_exporter:
     image: ghcr.io/tsuereth/palserver-metrics-exporter:latest
-    command: --palserver-host=game --palserver-admin-password-file=/run/secrets/admin_password --include-game-data=true
+    command: --palserver-host=game --palserver-admin-password-file=/run/secrets/admin_password --include-game-data=true --source-map-file=/PalServerMetricsExporter/map-default.png
     depends_on:
       game:
         condition: service_healthy
