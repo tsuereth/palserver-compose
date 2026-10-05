@@ -201,7 +201,7 @@ The `metrics_exporter` service's metrics output includes map locations for playe
 
 By saving an image file in the `worldmap/` folder, and modifying the `.env` setting for `METRICS_EXPORTER_MAP_FILE` to reference that file *e.g.* `METRICS_EXPORTER_MAP_FILE=/worldmap/T_WorldMap.png`, that image will be served by a special HTTP endpoint - and can be used in a metrics visualization - as described in [PalServerMetricsExporter's README](https://github.com/tsuereth/palserver-metrics-exporter/blob/main/README.md#map-image-and-location-coordinates).
 
-**SCREENSHOT TODO**
+![Grafana dashboard example map](README-images/palserver-grafana-map.png)
 
 # Save data management
 
