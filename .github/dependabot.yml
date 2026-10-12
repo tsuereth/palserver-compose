@@ -10,7 +10,7 @@ updates:
       interval: cron
       cronjob: '0 12 * * 5'
   - package-ecosystem: nuget
-    directory: "/"
+    directory: "/palserver-container/"
     groups:
       all:
         patterns:
