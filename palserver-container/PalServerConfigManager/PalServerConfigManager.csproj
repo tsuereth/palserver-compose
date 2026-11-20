@@ -18,7 +18,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="11.0.0" />
     <PackageReference Include="Mono.Options" Version="6.12.0.148" />
-    <PackageReference Include="PeanutButter.INI" Version="3.0.443" />
+    <PackageReference Include="PeanutButter.INI" Version="3.0.448" />
   </ItemGroup>
 
 </Project>
